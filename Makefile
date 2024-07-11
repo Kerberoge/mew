@@ -27,9 +27,6 @@ all: mew
 .c.o:
 	$(CC) -c $(EMCFLAGS) $<
 
-config.h:
-	cp config.def.h $@
-
 mew.o: config.h wlr-layer-shell-unstable-v1-protocol.h xdg-activation-v1-protocol.h xdg-shell-protocol.h
 
 mew: wlr-layer-shell-unstable-v1-protocol.o xdg-activation-v1-protocol.o xdg-shell-protocol.o mew.o
@@ -58,17 +55,12 @@ clean:
 	rm -f mew *.o *-protocol.*
 
 install: all
-	mkdir -p $(DESTDIR)$(PREFIX)/bin
-	cp -f mew mew-run $(DESTDIR)$(PREFIX)/bin
-	chmod 755 $(DESTDIR)$(PREFIX)/bin/mew
-	chmod 755 $(DESTDIR)$(PREFIX)/bin/mew-run
-	mkdir -p $(DESTDIR)$(MANPREFIX)/man1
-	sed "s/VERSION/$(VERSION)/g" < mew.1 > $(DESTDIR)$(MANPREFIX)/man1/mew.1
-	chmod 644 $(DESTDIR)$(MANPREFIX)/man1/mew.1
+	install -s -D -t $(DESTDIR)$(PREFIX)/bin mew
+	install -D -t $(DESTDIR)$(MANPREFIX)/man1 mew.1
+	sed -i "s/VERSION/$(VERSION)/g" $(DESTDIR)$(MANPREFIX)/man1/mew.1
 
 uninstall:
 	rm -f $(DESTDIR)$(PREFIX)/bin/mew\
-		$(DESTDIR)$(PREFIX)/bin/mew-run\
 		$(DESTDIR)$(MANPREFIX)/man1/mew.1
 
 .PHONY: all clean install uninstall
