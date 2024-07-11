@@ -1,4 +1,5 @@
 static int top              = 1;
+static int case_insensitive = 1;
 static int item_padding     = 20;
 static const char *fonts[]  = { "DejaVu Sans Mono:size=10.5" };
 static const char *prompt   = NULL;
