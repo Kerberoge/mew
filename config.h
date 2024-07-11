@@ -1,19 +1,16 @@
-/* See LICENSE file for copyright and license details. */
-/* Default settings; can be overriden by command line. */
-
-static int top              = 1;                       /* -b option; if 0, appear at bottom */
-static int item_padding     = 100;                     /* horizontal padding between items */
-static const char *fonts[]  = { "monospace:size=10" }; /* -f option overrides fonts[0] */
-static const char *prompt   = NULL;                    /* -p option; prompt to the left of input field */
+static int top              = 1;
+static int item_padding     = 20;
+static const char *fonts[]  = { "DejaVu Sans Mono:size=10.5" };
+static const char *prompt   = NULL;
 static uint32_t colors[][2] = {
-	/*               fg         bg          */
-	[SchemeNorm] = { 0xbbbbbbff, 0x222222ff },
-	[SchemeSel]  = { 0xeeeeeeff, 0x005577ff },
+	/*               fg          bg          */
+	[SchemeNorm] = { 0xddddddff, 0x222033ff },
+	[SchemeSel]  = { 0x9186dbff, 0x222033ff },
 	[SchemeOut]  = { 0x000000ff, 0x00ffffff },
 };
 
-/* -l option; if nonzero, use vertical list with given number of lines */
-static unsigned int lines      = 0;
+/* If nonzero, use vertical list with given number of lines */
+static unsigned int lines   = 0;
 
 /*
  * Characters not considered part of a word while deleting words

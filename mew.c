@@ -1,4 +1,3 @@
-/* See LICENSE file for copyright and license details. */
 #include <ctype.h>
 #include <locale.h>
 #include <poll.h>
@@ -177,7 +176,7 @@ loadfonts(void)
 static unsigned int
 textw_clamp(const char *str, unsigned int n)
 {
-	unsigned int w = drwl_font_getwidth_clamp(drw, str, n) + item_padding;
+	unsigned int w = drwl_font_getwidth_clamp(drw, str, n) + 2 * item_padding;
 	return MIN(w, n);
 }
 
@@ -261,7 +260,7 @@ drawitem(struct item *item, int x, int y, int w)
 	else
 		drwl_setscheme(drw, colors[SchemeNorm]);
 
-	return drwl_text(drw, x, y, w, bh, item_padding / 2, item->text, 0);
+	return drwl_text(drw, x, y, w, bh, item_padding, item->text, 0);
 }
 
 static void
