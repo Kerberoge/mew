@@ -2,9 +2,6 @@
 # See LICENSE file for copyright and license details.
 .POSIX:
 
-# mew version
-VERSION = 1.0
-
 # pkg-config
 PKG_CONFIG = pkg-config
 
@@ -17,7 +14,7 @@ INCS = `$(PKG_CONFIG) --cflags $(PKGS)`
 LIBS = `$(PKG_CONFIG) --libs $(PKGS)`
 
 # flags
-EMCPPFLAGS = -D_POSIX_C_SOURCE=200809L -DVERSION=\"$(VERSION)\"
+EMCPPFLAGS = -D_POSIX_C_SOURCE=200809L
 EMCFLAGS   = -pedantic -Wall $(INCS) $(EMCPPFLAGS) $(CFLAGS)
 LDLIBS     = $(LIBS)
 

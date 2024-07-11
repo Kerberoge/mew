@@ -723,7 +723,7 @@ setup(void)
 static void
 usage(void)
 {
-	die("usage: mew [-biv] [-l lines] [-p prompt] [-f font]\n"
+	die("usage: mew [-bi] [-l lines] [-p prompt] [-f font]\n"
 	    "           [-nb color] [-nf color] [-sb color] [-sf color]");
 }
 
@@ -734,10 +734,7 @@ main(int argc, char *argv[])
 
 	for (i = 1; i < argc; i++) {
 		/* these options take no arguments */
-		if (!strcmp(argv[i], "-v")) {
-			puts("mew-"VERSION);
-			exit(0);
-		} else if (!strcmp(argv[i], "-b"))
+		if (!strcmp(argv[i], "-b"))
 			top = 0;
 		else if (!strcmp(argv[i], "-i")) { 
 			fstrncmp = strncasecmp;
