@@ -40,9 +40,6 @@ static struct {
 	int repeat_timer;
 	enum wl_keyboard_key_state repeat_key_state;
 	xkb_keysym_t repeat_sym;
-
-	int ctrl;
-	int shift;
 } kbd;
 
 static char text[BUFSIZ] = "";
@@ -60,9 +57,6 @@ static struct wl_display *display;
 static struct wl_compositor *compositor;
 static struct wl_seat *seat;
 static struct wl_shm *shm;
-static struct wl_data_device_manager *data_device_manager;
-static struct wl_data_device *data_device;
-static struct wl_data_offer *data_offer;
 static struct zwlr_layer_shell_v1 *layer_shell;
 static struct zwlr_layer_surface_v1 *layer_surface;
 static struct xdg_activation_v1 *activation;
@@ -222,7 +216,6 @@ cleanup(void)
 	drwl_destroy(drw);
 	drwl_fini();
 
-	wl_data_device_release(data_device);
 	zwlr_layer_shell_v1_destroy(layer_shell);
 	xdg_activation_v1_destroy(activation);
 	wl_shm_destroy(shm);
@@ -400,90 +393,13 @@ nextrune(int inc)
 }
 
 static void
-movewordedge(int dir)
-{
-	if (dir < 0) { /* move cursor to the start of the word*/
-		while (cursor > 0 && strchr(worddelimiters, text[nextrune(-1)]))
-			cursor = nextrune(-1);
-		while (cursor > 0 && !strchr(worddelimiters, text[nextrune(-1)]))
-			cursor = nextrune(-1);
-	} else { /* move cursor to the end of the word */
-		while (text[cursor] && strchr(worddelimiters, text[cursor]))
-			cursor = nextrune(+1);
-		while (text[cursor] && !strchr(worddelimiters, text[cursor]))
-			cursor = nextrune(+1);
-	}
-}
-
-static void
-paste(void)
-{
-	int fds[2];
-	ssize_t n;
-	char buf[1024];
-
-	if (!data_offer)
-		return;
-
-	if (pipe(fds) < 0)
-		die("pipe");
-
-	wl_data_offer_receive(data_offer, "text/plain", fds[1]);
-	close(fds[1]);
-
-	wl_display_roundtrip(display);
-
-	for (;;) {
-		n = read(fds[0], buf, sizeof(buf));
-		if (n <= 0)
-			break;
-		insert(buf, n);
-	}
-	close(fds[0]);
-
-	wl_data_offer_destroy(data_offer);
-}
-
-static void
-keyboard_keypress(enum wl_keyboard_key_state state, xkb_keysym_t sym, int ctrl, int shift)
+keyboard_keypress(enum wl_keyboard_key_state state, xkb_keysym_t sym)
 {
 	char buf[8];
 
 	if (state != WL_KEYBOARD_KEY_STATE_PRESSED)
 		return;
 
-	if (ctrl) {
-		switch (xkb_keysym_to_lower(sym)) {
-		case XKB_KEY_k: /* delete right */
-			text[cursor] = '\0';
-			match();
-			goto draw;
-		case XKB_KEY_u: /* delete left */
-			insert(NULL, 0 - cursor);
-			goto draw;
-		case XKB_KEY_w: /* delete word */
-			while (cursor > 0 && strchr(worddelimiters, text[nextrune(-1)]))
-				insert(NULL, nextrune(-1) - cursor);
-			while (cursor > 0 && !strchr(worddelimiters, text[nextrune(-1)]))
-				insert(NULL, nextrune(-1) - cursor);
-			goto draw;
-		case XKB_KEY_y: /* paste selection */
-		case XKB_KEY_Y:
-			paste();
-			goto draw;
-		case XKB_KEY_Left:
-		case XKB_KEY_KP_Left:
-			movewordedge(-1);
-			goto draw;
-		case XKB_KEY_Right:
-		case XKB_KEY_KP_Right:
-			movewordedge(+1);
-			goto draw;
-		case XKB_KEY_bracketleft:
-			cleanup();
-			exit(EXIT_FAILURE);
-		}
-	}
 	switch (sym) {
 	case XKB_KEY_Delete:
 	case XKB_KEY_KP_Delete:
@@ -557,8 +473,8 @@ keyboard_keypress(enum wl_keyboard_key_state state, xkb_keysym_t sym, int ctrl, 
 		break;
 	case XKB_KEY_Return:
 	case XKB_KEY_KP_Enter:
-		submit((sel && !shift) ? sel->text : text);
-		if (!ctrl && submit != exec_cmd)
+		submit(sel->text);
+		if (submit != exec_cmd)
 			running = 0;
 		return;
 	case XKB_KEY_Right:
@@ -577,19 +493,10 @@ keyboard_keypress(enum wl_keyboard_key_state state, xkb_keysym_t sym, int ctrl, 
 			calcoffsets();
 		}
 		break;
-	case XKB_KEY_Tab:
-		if (!sel)
-			return;
-		cursor = strnlen(sel->text, sizeof text - 1);
-		memcpy(text, sel->text, cursor);
-		text[cursor] = '\0';
-		match();
-		break;
 	default:
 		if (xkb_keysym_to_utf8(sym, buf, 8))
 			insert(buf, strnlen(buf, 8));
 	}
-draw:
 	drawmenu();
 }
 
@@ -622,7 +529,7 @@ keyboard_handle_key(void *data, struct wl_keyboard *wl_keyboard,
 	enum wl_keyboard_key_state key_state = _key_state;
 	xkb_keysym_t sym = xkb_state_key_get_one_sym(kbd.xkb_state, key + 8);
 
-	keyboard_keypress(key_state, sym, kbd.ctrl, kbd.shift);
+	keyboard_keypress(key_state, sym);
 
 	if (key_state == WL_KEYBOARD_KEY_STATE_PRESSED && kbd.repeat_period >= 0) {
 		kbd.repeat_key_state = key_state;
@@ -640,12 +547,6 @@ keyboard_handle_modifiers(void *data, struct wl_keyboard *wl_keyboard,
 {
 	xkb_state_update_mask(kbd.xkb_state,
 		mods_depressed, mods_latched, mods_locked, 0, 0, group);
-	kbd.ctrl = xkb_state_mod_name_is_active(kbd.xkb_state,
-		XKB_MOD_NAME_CTRL,
-		XKB_STATE_MODS_DEPRESSED | XKB_STATE_MODS_LATCHED);
-	kbd.shift = xkb_state_mod_name_is_active(kbd.xkb_state,
-		XKB_MOD_NAME_SHIFT,
-		XKB_STATE_MODS_DEPRESSED | XKB_STATE_MODS_LATCHED);
 }
 
 static void
@@ -653,7 +554,7 @@ keyboard_repeat(void)
 {
 	struct itimerspec spec = { 0 };
 
-	keyboard_keypress(kbd.repeat_key_state, kbd.repeat_sym, kbd.ctrl, kbd.shift);
+	keyboard_keypress(kbd.repeat_key_state, kbd.repeat_sym);
 
 	spec.it_value.tv_sec = kbd.repeat_period / 1000;
 	spec.it_value.tv_nsec = (kbd.repeat_period % 1000) * 1000000l;
@@ -716,18 +617,6 @@ static const struct wl_surface_listener surface_listener = {
 };
 
 static void
-data_device_handle_selection(void *data, struct wl_data_device *data_device,
-		struct wl_data_offer *_data_offer)
-{
-	data_offer = _data_offer;
-}
-
-static const struct wl_data_device_listener data_device_listener = {
-	.data_offer = noop,
-	.selection = data_device_handle_selection,
-};
-
-static void
 seat_handle_capabilities(void *data, struct wl_seat *wl_seat, enum wl_seat_capability caps)
 {
 	if (!(caps & WL_SEAT_CAPABILITY_KEYBOARD))
@@ -757,9 +646,6 @@ registry_handle_global(void *data, struct wl_registry *registry,
 	else if (!strcmp(interface, zwlr_layer_shell_v1_interface.name))
 		layer_shell = wl_registry_bind(registry, name,
 			&zwlr_layer_shell_v1_interface, 1);
-	else if (!strcmp(interface, wl_data_device_manager_interface.name))
-		data_device_manager = wl_registry_bind(registry, name,
-			&wl_data_device_manager_interface, 3);
 	else if (!strcmp(interface, xdg_activation_v1_interface.name))
 		activation = wl_registry_bind(registry, name, &xdg_activation_v1_interface, 1);
 	else if (!strcmp(interface, wl_seat_interface.name)) {
@@ -853,12 +739,6 @@ setup(void)
 		die("wl_shm not available");
 	if (!layer_shell)
 		die("layer_shell not available");
-	if (!data_device_manager)
-		die("data_device_manager not available");
-
-	data_device = wl_data_device_manager_get_data_device(
-		data_device_manager, seat);
-	wl_data_device_add_listener(data_device, &data_device_listener, NULL);
 
 	drwl_init();
 	if (!(drw = drwl_create()))
