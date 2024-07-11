@@ -22,12 +22,11 @@
 
 #define TEXTW(X)              (drwl_font_getwidth(drw, (X)) + lrpad)
 
-enum { SchemeNorm, SchemeSel, SchemeOut }; /* color schemes */
+enum { SchemeNorm, SchemeSel }; /* color schemes */
 
 struct item {
 	char *text;
 	struct item *left, *right;
-	int out;
 };
 
 static struct {
@@ -255,8 +254,6 @@ drawitem(struct item *item, int x, int y, int w)
 {
 	if (item == sel)
 		drwl_setscheme(drw, colors[SchemeSel]);
-	else if (item->out)
-		drwl_setscheme(drw, colors[SchemeOut]);
 	else
 		drwl_setscheme(drw, colors[SchemeNorm]);
 
@@ -457,22 +454,6 @@ keyboard_keypress(enum wl_keyboard_key_state state, xkb_keysym_t sym, int ctrl, 
 
 	if (ctrl) {
 		switch (xkb_keysym_to_lower(sym)) {
-		case XKB_KEY_a: sym = XKB_KEY_Home; break;
-		case XKB_KEY_b: sym = XKB_KEY_Left; break;
-		case XKB_KEY_c: sym = XKB_KEY_Escape; break;
-		case XKB_KEY_d: sym = XKB_KEY_Delete; break;
-		case XKB_KEY_e: sym = XKB_KEY_End; break;
-		case XKB_KEY_f: sym = XKB_KEY_BackSpace; break;
-		case XKB_KEY_g: sym = XKB_KEY_Escape; break;
-		case XKB_KEY_h: sym = XKB_KEY_BackSpace; break;
-		case XKB_KEY_i: sym = XKB_KEY_Tab; break;
-		case XKB_KEY_j: /* fallthrough */
-		case XKB_KEY_J: /* fallthrough */
-		case XKB_KEY_m: /* fallthrough */
-		case XKB_KEY_M: sym = XKB_KEY_Return; break;
-		case XKB_KEY_n: sym = XKB_KEY_Right; break;
-		case XKB_KEY_p: sym = XKB_KEY_Up; break;
-
 		case XKB_KEY_k: /* delete right */
 			text[cursor] = '\0';
 			match();
@@ -498,9 +479,6 @@ keyboard_keypress(enum wl_keyboard_key_state state, xkb_keysym_t sym, int ctrl, 
 		case XKB_KEY_KP_Right:
 			movewordedge(+1);
 			goto draw;
-		case XKB_KEY_Return:
-		case XKB_KEY_KP_Enter:
-			break;
 		case XKB_KEY_bracketleft:
 			cleanup();
 			exit(EXIT_FAILURE);
@@ -813,8 +791,6 @@ readstdin(void)
 			line[len - 1] = '\0';
 		if (!(items[i].text = strdup(line)))
 			die("strdup:");
-
-		items[i].out = 0;
 	}
 	free(line);
 	if (items)

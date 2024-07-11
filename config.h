@@ -6,7 +6,6 @@ static uint32_t colors[][2] = {
 	/*               fg          bg          */
 	[SchemeNorm] = { 0xddddddff, 0x222033ff },
 	[SchemeSel]  = { 0x9186dbff, 0x222033ff },
-	[SchemeOut]  = { 0x000000ff, 0x00ffffff },
 };
 
 /* If nonzero, use vertical list with given number of lines */
