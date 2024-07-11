@@ -706,7 +706,7 @@ layer_surface_handle_configure(void *data, struct zwlr_layer_surface_v1 *surface
 {
 	mw = width * scale;
 	mh = height * scale;
-	inputw = mw / 3; /* input width: ~33% of monitor width */
+	inputw = mw / 4; /* input width: ~25% of monitor width */
 	zwlr_layer_surface_v1_ack_configure(surface, serial);
 	drawmenu();
 }
