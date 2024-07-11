@@ -763,10 +763,6 @@ main(int argc, char *argv[])
 	}
 
 	readstdin();
-#ifdef __OpenBSD__
-	if (pledge("stdio rpath", NULL) == -1)
-		die("pledge");
-#endif
 	setup();
 	run();
 	cleanup();
