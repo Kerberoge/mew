@@ -70,7 +70,7 @@ poolbuf_create(struct wl_shm *shm, int32_t width, int32_t height)
 
 #ifdef __POOLBUF_HAS_MEMFD_CREATE
 	fd = memfd_create("drwl-shm-buffer-pool",
-		MFD_CLOEXEC | MFD_ALLOW_SEALING | MFD_NOEXEC_SEAL);
+		MFD_CLOEXEC | MFD_ALLOW_SEALING);
 #else
 	fd = create_shm();
 #endif
