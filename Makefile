@@ -26,18 +26,13 @@ all: mew
 .c.o:
 	$(CC) -c $(EMCFLAGS) $<
 
-mew.o: config.h wlr-layer-shell-unstable-v1-protocol.h xdg-activation-v1-protocol.h xdg-shell-protocol.h
+mew.o: config.h wlr-layer-shell-unstable-v1-protocol.h xdg-shell-protocol.h
 
-mew: wlr-layer-shell-unstable-v1-protocol.o xdg-activation-v1-protocol.o xdg-shell-protocol.o mew.o
-	$(CC) $(LDFLAGS) -o $@ wlr-layer-shell-unstable-v1-protocol.o xdg-activation-v1-protocol.o xdg-shell-protocol.o mew.o $(LDLIBS)
+mew: wlr-layer-shell-unstable-v1-protocol.o xdg-shell-protocol.o mew.o
+	$(CC) $(LDFLAGS) -o $@ wlr-layer-shell-unstable-v1-protocol.o xdg-shell-protocol.o mew.o $(LDLIBS)
 
 WAYLAND_PROTOCOLS = `$(PKG_CONFIG) --variable=pkgdatadir wayland-protocols`
 WAYLAND_SCANNER   = `$(PKG_CONFIG) --variable=wayland_scanner wayland-scanner`
-
-xdg-activation-v1-protocol.h:
-	$(WAYLAND_SCANNER) client-header $(WAYLAND_PROTOCOLS)/staging/xdg-activation/xdg-activation-v1.xml $@
-xdg-activation-v1-protocol.c:
-	$(WAYLAND_SCANNER) private-code $(WAYLAND_PROTOCOLS)/staging/xdg-activation/xdg-activation-v1.xml $@
 
 xdg-shell-protocol.h:
 	$(WAYLAND_SCANNER) client-header $(WAYLAND_PROTOCOLS)/stable/xdg-shell/xdg-shell.xml $@
