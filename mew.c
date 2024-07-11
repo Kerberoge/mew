@@ -17,7 +17,6 @@
 
 #include "drwl.h"
 #include "poolbuf.h"
-#include "xdg-activation-v1-protocol.h"
 #include "wlr-layer-shell-unstable-v1-protocol.h"
 
 #define TEXTW(X)              (drwl_font_getwidth(drw, (X)) + lrpad)
@@ -59,7 +58,6 @@ static struct wl_seat *seat;
 static struct wl_shm *shm;
 static struct zwlr_layer_shell_v1 *layer_shell;
 static struct zwlr_layer_surface_v1 *layer_surface;
-static struct xdg_activation_v1 *activation;
 static struct wl_surface *surface;
 static struct wl_registry *registry;
 static Drwl *drw;
@@ -68,7 +66,6 @@ static Drwl *drw;
 
 static int (*fstrncmp)(const char *, const char *, size_t) = strncmp;
 static char *(*fstrstr)(const char *, const char *) = strstr;
-static int (*submit)(const char*) = puts;
 
 static void
 noop()
@@ -93,44 +90,6 @@ die(const char *fmt, ...)
 	}
 
 	exit(EXIT_FAILURE);
-}
-
-static void
-activation_token_handle_done(void *data,
-	struct xdg_activation_token_v1 *activation_token, const char *token)
-{
-	char *argv[] = {"/bin/sh", "-c", (char*)data, NULL};
-
-	xdg_activation_token_v1_destroy(activation_token);
-
-	switch (fork()) {
-	case -1:
-		die("fork:");
-	case 0:
-		setenv("XDG_ACTIVATION_TOKEN", token, 1);
-		execv(argv[0], argv);
-		die("execvp:");
-	}
-
-	running = 0;
-}
-
-static const struct xdg_activation_token_v1_listener activation_token_listener = {
-	.done = activation_token_handle_done,
-};
-
-static int
-exec_cmd(const char *text)
-{
-	struct xdg_activation_token_v1 *activation_token;
-
-	activation_token = xdg_activation_v1_get_activation_token(activation);
-	xdg_activation_token_v1_set_surface(activation_token, surface);
-	xdg_activation_token_v1_add_listener(activation_token,
-		&activation_token_listener, (void *)text);
-	xdg_activation_token_v1_commit(activation_token);
-
-	return 0;
 }
 
 static void
@@ -217,7 +176,6 @@ cleanup(void)
 	drwl_fini();
 
 	zwlr_layer_shell_v1_destroy(layer_shell);
-	xdg_activation_v1_destroy(activation);
 	wl_shm_destroy(shm);
 	wl_compositor_destroy(compositor);
 	wl_registry_destroy(registry);
@@ -473,9 +431,8 @@ keyboard_keypress(enum wl_keyboard_key_state state, xkb_keysym_t sym)
 		break;
 	case XKB_KEY_Return:
 	case XKB_KEY_KP_Enter:
-		submit(sel->text);
-		if (submit != exec_cmd)
-			running = 0;
+		puts(sel->text);
+		running = 0;
 		return;
 	case XKB_KEY_Right:
 	case XKB_KEY_KP_Right:
@@ -646,8 +603,6 @@ registry_handle_global(void *data, struct wl_registry *registry,
 	else if (!strcmp(interface, zwlr_layer_shell_v1_interface.name))
 		layer_shell = wl_registry_bind(registry, name,
 			&zwlr_layer_shell_v1_interface, 1);
-	else if (!strcmp(interface, xdg_activation_v1_interface.name))
-		activation = wl_registry_bind(registry, name, &xdg_activation_v1_interface, 1);
 	else if (!strcmp(interface, wl_seat_interface.name)) {
 		seat = wl_registry_bind (registry, name, &wl_seat_interface, 4);
 		wl_seat_add_listener(seat, &seat_listener, NULL);
@@ -768,7 +723,7 @@ setup(void)
 static void
 usage(void)
 {
-	die("usage: mew [-beiv] [-l lines] [-p prompt] [-f font]\n"
+	die("usage: mew [-biv] [-l lines] [-p prompt] [-f font]\n"
 	    "           [-nb color] [-nf color] [-sb color] [-sf color]");
 }
 
@@ -784,8 +739,6 @@ main(int argc, char *argv[])
 			exit(0);
 		} else if (!strcmp(argv[i], "-b"))
 			top = 0;
-		else if (!strcmp(argv[i], "-e"))
-			submit = exec_cmd;
 		else if (!strcmp(argv[i], "-i")) { 
 			fstrncmp = strncasecmp;
 			fstrstr = cistrstr;
