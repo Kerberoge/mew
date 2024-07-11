@@ -10,7 +10,6 @@ PKG_CONFIG = pkg-config
 
 # paths
 PREFIX = /usr/local
-MANPREFIX = $(PREFIX)/share/man
 
 # includes and libs
 PKGS = fcft pixman-1 wayland-client xkbcommon
@@ -56,11 +55,8 @@ clean:
 
 install: all
 	install -s -D -t $(DESTDIR)$(PREFIX)/bin mew
-	install -D -t $(DESTDIR)$(MANPREFIX)/man1 mew.1
-	sed -i "s/VERSION/$(VERSION)/g" $(DESTDIR)$(MANPREFIX)/man1/mew.1
 
 uninstall:
-	rm -f $(DESTDIR)$(PREFIX)/bin/mew\
-		$(DESTDIR)$(MANPREFIX)/man1/mew.1
+	rm -f $(DESTDIR)$(PREFIX)/bin/mew
 
 .PHONY: all clean install uninstall
